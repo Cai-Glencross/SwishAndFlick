@@ -28,6 +28,18 @@ public class DrawManager : MonoBehaviour
     private ArrayList templates;
     private PlayerController player;
 
+    [SerializeField]
+    private float minumumDistance;
+
+    [SerializeField]
+    private float pointPercentageThreshold;
+
+    [SerializeField]
+    private float checklistThreshold;
+
+    [SerializeField]
+    private GameObject[] templateGameObjects;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -39,17 +51,18 @@ public class DrawManager : MonoBehaviour
         lineTemplate = GameObject.Find("LineTemplate").GetComponent<UILineRenderer>().Points;
 
 
-
         templates = new ArrayList();
-        templates.Add(ovalTemplate);
-        templates.Add(lineTemplate);
+        foreach (GameObject template in templateGameObjects) 
+        {
+            templates.Add(template.GetComponent<UILineRenderer>().Points);
+        }
 
         lineRenderer.Points = new Vector2[lineLength];
 
-        GameObject.Find("OvalTemplate").SetActive(false);
-        GameObject.Find("LineTemplate").SetActive(false);
-
-
+        foreach (GameObject template in templateGameObjects)
+        {
+            template.SetActive(false);
+        }
     }
 
     // Update is called once per frame
@@ -64,7 +77,14 @@ public class DrawManager : MonoBehaviour
         {
             //Debug.Log("positionLog count is: " + positionLog.Count);
             int spell = determineSpell();
-            player.castSpell(spell);
+            if (spell != -1)
+            {
+                player.castSpell(spell);
+            }
+            else
+            {
+                StartCoroutine("FlashTemplates");
+            }
             clear();
         }
 
@@ -107,19 +127,49 @@ public class DrawManager : MonoBehaviour
 
     public int determineSpell()
     {
+        ArrayList templatePointChecklist = new ArrayList();
+        foreach (Vector2[] checklistPoints in templates)
+        {
+            templatePointChecklist.Add(new bool[checklistPoints.Length]);
+        }
+
         float[] points = new float[templates.Count];
         foreach(Vector2 position in positionLog)
         {
-            float[] scoreOfTemplates = getScore(position);
+            float[] scoreOfTemplates = getScore(position, templatePointChecklist);
             //we consider a point in the postionLog being closer to one Template than the other as a "point"
-            points[Array.IndexOf(scoreOfTemplates, scoreOfTemplates.Max())] += 1;
+            if (scoreOfTemplates.Min() <= minumumDistance)
+            {
+                points[Array.IndexOf(scoreOfTemplates, scoreOfTemplates.Min())] += 1;
+            }
         }
+
         //Debug.Log("points are: " + string.Join(", ", points));
         //The template with the most points, wins!
-        return Array.IndexOf(points, points.Max());
+        Debug.Log("Point percentage is " + (points.Max() / positionLog.Count));
+        if ((points.Max()/positionLog.Count) >= pointPercentageThreshold)
+        {
+            //ensure that enough of the template has been covered
+            int winningTemplateIndex = Array.IndexOf(points, points.Max());
+            float checklistPercentage = determineChecklistPercentage(winningTemplateIndex, templatePointChecklist);
+            Debug.Log("checklist percentage is" + checklistPercentage);
+            if (checklistPercentage > checklistThreshold)
+            {
+                return winningTemplateIndex;
+            }
+            else
+            {
+                return -1;
+            }
+
+        }
+        else
+        {
+            return -1;
+        }
     }
 
-    public float[] getScore(Vector2 position)
+    public float[] getScore(Vector2 position, ArrayList checklistPoints)
     {
         float[] scores = new float[templates.Count];
         for(int i = 0; i < templates.Count; i++)
@@ -128,9 +178,43 @@ public class DrawManager : MonoBehaviour
                 .Select(templatePosition => Vector2.Distance(position, templatePosition)).ToArray();
             //the closest distance for each template is the score of that template
             //Debug.Log("distances are: " + string.Join(", ", distances));
+            //assuming no distances are exactly the same
+            ((bool[])checklistPoints[i])[Array.IndexOf(distances, distances.Min())] = true;
+
             scores[i] = distances.Min();
         }
         //Debug.Log("scores are: " + string.Join(", ", scores));
         return scores;
+    }
+
+    private IEnumerator FlashTemplates()
+    {
+        foreach (GameObject template in templateGameObjects)
+        {
+            template.SetActive(true);
+        }
+
+        yield return new WaitForSeconds(1);
+
+        foreach (GameObject template in templateGameObjects)
+        {
+            template.SetActive(false);
+        }
+    }
+
+    private float determineChecklistPercentage(int index, ArrayList templatePointChecklist)
+    {
+        bool[] checklist = (bool[])templatePointChecklist[index];
+
+        //get percentage
+        int numChecks = 0;
+        foreach (bool check in checklist)
+        {
+            if (check)
+            {
+                numChecks++;
+            }
+        }
+        return (float)numChecks / checklist.Length;
     }
 }
