@@ -106,12 +106,12 @@ public class EnemyController : MonoBehaviour
             {
                 scoreController.UpdateScore(scoreWorth);
             }
-
             isFading = true;
             enemyAnim.SetBool("IsDying", true);
             StartCoroutine(WaitAndDie(2.0f));
             enemySpeed = 0;
-            Destroy(collision.gameObject);
+            //Destroy(collision.gameObject);
+            collision.gameObject.GetComponent<SpellProjectile>().SuccessfulHit();
             textMeshPro.gameObject.SetActive(true);
         }
         else if (collision.gameObject.tag.Equals("Player"))
@@ -121,6 +121,7 @@ public class EnemyController : MonoBehaviour
         else if(!collision.gameObject.tag.Equals("Terrain"))
         {
             //Destroy(collision.gameObject);
+            collision.gameObject.GetComponent<SpellProjectile>().FailedHit();
         }
     }
 

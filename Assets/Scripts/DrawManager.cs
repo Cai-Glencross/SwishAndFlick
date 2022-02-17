@@ -68,7 +68,6 @@ public class DrawManager : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-       
         if (Input.GetMouseButton(0))
         {
             draw();
@@ -87,8 +86,6 @@ public class DrawManager : MonoBehaviour
             }
             clear();
         }
-
-
     }
 
     public void draw()
