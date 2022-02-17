@@ -37,6 +37,14 @@ public class EnemyController : MonoBehaviour
 
     [SerializeField]
     private float attackDamage;
+
+    [SerializeField]
+    private AudioClip attackingSound;
+
+    [SerializeField]
+    private AudioClip dyingSound;
+
+    private AudioSource audioSource;
     
 
     private bool isFading;
@@ -55,6 +63,8 @@ public class EnemyController : MonoBehaviour
         enemyMaterial = enemyMeshObj.GetComponent<SkinnedMeshRenderer>().material;
 
         scoreController = FindObjectOfType<ScoreController>();
+
+        audioSource = this.GetComponent<AudioSource>();
     }
 
     // Update is called once per frame
@@ -121,12 +131,17 @@ public class EnemyController : MonoBehaviour
         else if(!collision.gameObject.tag.Equals("Terrain"))
         {
             //Destroy(collision.gameObject);
-            collision.gameObject.GetComponent<SpellProjectile>().FailedHit();
+            SpellProjectile spellProjectile = collision.gameObject.GetComponent<SpellProjectile>();
+            if (spellProjectile)
+            {
+                spellProjectile.FailedHit();
+            }
         }
     }
 
     private IEnumerator WaitAndDie(float waitTime)
     {
+        audioSource.PlayOneShot(dyingSound);
         yield return new WaitForSeconds(waitTime);
         Destroy(this.gameObject);
        
@@ -136,6 +151,7 @@ public class EnemyController : MonoBehaviour
     {
         enemySpeed = 0;
         playerObject.GetComponent<PlayerController>().damage(attackDamage);
+        audioSource.PlayOneShot(attackingSound);
     }
 
 
